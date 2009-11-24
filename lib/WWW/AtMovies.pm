@@ -2,6 +2,16 @@ package WWW::AtMovies;
 
 use warnings;
 use strict;
+use Moose;
+use WWW::Mechanize;
+use HTML::TokeParser::Simple;
+#use Smart::Comments;
+
+has 'title'         => ( is => 'rw', isa => 'Str' );
+has 'chinese_title' => ( is => 'rw', isa => 'Str' );
+has 'crit'          => ( is => 'rw', isa => 'Str' );
+has 'imdb_code'     => ( is => 'rw', isa => 'Num' );
+has 'status'        => ( is => 'rw', isa => 'Num' );
 
 =head1 NAME
 
@@ -18,34 +28,67 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
-
     use WWW::AtMovies;
 
-    my $foo = WWW::AtMovies->new();
-    ...
-
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+    my $foo = WWW::AtMovies->new( crit => 'Troy' );
+    if ($foo->status) {
+	print $foo->title, "\n";
+	print $foo->chinese_title, "\n";
+	print $foo->imdb_code, "\n";
+    }
 
 =head1 FUNCTIONS
 
-=head2 function1
+=head2 new 
 
 =cut
 
-sub function1 {
+sub new {
+    my ($class, %args) = @_;
+    my $self = bless \%args, $class;
+    $self->_init;
+    return $self;
 }
 
-=head2 function2
+sub _init {
+    my $self = shift;
 
-=cut
+    ### homepage
+    my $mech = WWW::Mechanize->new;
+    $mech->get('http://www.atmovies.com.tw/home/');
 
-sub function2 {
+    ### search
+    my $form = $mech->current_form;
+    $form->value('search_term', $self->crit);
+    $mech->submit;
+
+    ### search result
+    my $result_link = $mech->find_link( url_regex => qr/redirect/ );
+    if (!$result_link) {
+	$self->status(0);
+	return;
+    }
+    $mech->get($result_link->url_abs);
+
+    ### movie page
+    my $imdb_url = $mech->find_link( url_regex => qr/imdb/ )->url_abs;
+    my ($imdb_code) = $imdb_url =~ /(\d+)/;
+    $self->imdb_code($imdb_code);
+
+    my $parser = HTML::TokeParser::Simple->new( string => $mech->content );
+    while ( my $span = $parser->get_tag('span') ) {
+	my $class = $span->get_attr('class');
+	next unless defined $class;
+	if ($class eq 'at21b') {
+	    $self->chinese_title( $parser->get_trimmed_text('/span') );
+	}
+	elsif ($class eq 'at12b_gray') {
+	    $self->title( $parser->get_trimmed_text('/span') );
+	}
+    }
+
+    $self->status(1);
+    return;
 }
 
 =head1 AUTHOR
