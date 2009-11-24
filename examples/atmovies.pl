@@ -11,18 +11,20 @@ binmode(STDIN,  ':encoding(utf8)');
 binmode(STDOUT, ':encoding(utf8)');
 binmode(STDERR, ':encoding(utf8)');
 
-my $foo = WWW::AtMovies->new( crit => '男女生了沒' );
+foreach my $crit ('男女生了沒', 'get smart', 'case 39') {
+    my $foo = WWW::AtMovies->new( crit => $crit );
 
-if ($foo->status) {
-    print $foo->title, "\n";
-    print $foo->chinese_title, "\n";
-    print $foo->imdb_code, "\n";
-}
+    if ($foo->status) {
+	print $foo->title, "\n";
+	print $foo->chinese_title, "\n";
+	print $foo->imdb_code, "\n";
 
-my $imdb = IMDB::Film->new( crit => $foo->imdb_code );
-if ($imdb->status) {
-    print $imdb->title,  "\n";
-    print $imdb->year,   "\n";
-    my $rating = $imdb->rating;
-    print $rating, "\n";
+	my $imdb = IMDB::Film->new( crit => $foo->imdb_code, cache => 1 );
+	if ($imdb->status) {
+	    print $imdb->title,  "\n";
+	    print $imdb->year,   "\n";
+	    my $rating = $imdb->rating;
+	    print $rating, "\n";
+	}
+    }
 }
