@@ -52,18 +52,17 @@ sub new {
 
 sub _init {
     my $self = shift;
-
-    ### homepage
+    my $search_term = $self->crit;
+    my $search_url 
+	= 'http://www.google.com.tw/search?hl=zh-TW&q=' 
+	    . $search_term 
+	    . '+site%3Awww.atmovies.com.tw';
+    ### $search_url
     my $mech = WWW::Mechanize->new;
-    $mech->get('http://www.atmovies.com.tw/home/');
-
-    ### search
-    my $form = $mech->current_form;
-    $form->value('search_term', $self->crit);
-    $mech->submit;
+    $mech->get($search_url);
 
     ### search result
-    my $result_link = $mech->find_link( url_regex => qr/redirect/ );
+    my $result_link = $mech->find_link( url_regex => qr/film_id/ );
     if (!$result_link) {
 	$self->status(0);
 	return;
